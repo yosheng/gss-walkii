@@ -130,7 +130,7 @@ export function App() {
                 onClick={() => handleSort("score")}
               >
                 <span className="inline-flex items-center gap-1">
-                  得分
+                  植樹點數
                   <SortIcon field="score" sortField={sortField} sortDir={sortDir} />
                 </span>
               </TableHead>

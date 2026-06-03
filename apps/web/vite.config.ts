@@ -11,4 +11,13 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      "/api/runnii": {
+        target: "https://www.runnii4life.com/RUNNII",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/runnii/, ""),
+      },
+    },
+  },
 })

@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/runnii/:match*",
+      "destination": "https://www.runnii4life.com/RUNNII/:match*"
+    }
+  ]
+}

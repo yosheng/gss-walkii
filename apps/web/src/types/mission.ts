@@ -13,3 +13,25 @@ export interface SummaryList {
 export interface MissionSummaryResponse {
   summaryList: SummaryList[]
 }
+
+export interface MissionListItemId {
+  accountSerialNo: number
+  missionNo: number
+}
+
+export interface MissionListItem {
+  calories: number
+  distance: number
+  duration: number
+  finishTime: string
+  groupNo: number
+  id: MissionListItemId
+  name: string
+  score: number
+  stage: number
+  status: number
+}
+
+export interface MissionListResponse {
+  dataList: MissionListItem[]
+}

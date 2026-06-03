@@ -1,15 +1,20 @@
 import { apiClient } from "@/lib/apiClient"
-import type { MissionSummaryResponse } from "@/types/mission"
+import type { MissionListResponse, MissionSummaryResponse } from "@/types/mission"
 
-const MISSION_API =
-  "https://www.runnii4life.com/RUNNII/missionInfo/getMissionInfoSummaryGroupByGroupNo.do"
+const BASE = "/api/runnii/missionInfo"
 
 export const missionService = {
   getSummaryByGroupNo(missionNo: number): Promise<MissionSummaryResponse> {
-    return apiClient.post<MissionSummaryResponse>(MISSION_API, { missionNo, type: 1 })
+    return apiClient.post(`${BASE}/getMissionInfoSummaryGroupByGroupNo.do`, { missionNo, type: 1 })
+  },
+
+  getListByMissionNo(missionNo: number, groupNo: number): Promise<MissionListResponse> {
+    return apiClient.post(`${BASE}/getMissionInfoListByMissionNo.do`, { missionNo, groupNo })
   },
 }
 
 export const missionKeys = {
   summaryByGroupNo: (missionNo: number) => ["mission", "summary", missionNo] as const,
+  listByMissionNo: (missionNo: number, groupNo: number) =>
+    ["mission", "list", missionNo, groupNo] as const,
 }
