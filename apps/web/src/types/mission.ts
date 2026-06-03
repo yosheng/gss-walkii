@@ -14,6 +14,23 @@ export interface MissionSummaryResponse {
   summaryList: SummaryList[]
 }
 
+export interface RankedMemberItem {
+  calories: number
+  distance: number
+  duration: number
+  finishTime: string
+  groupNo: number
+  id: MissionListItemId
+  name: string | null
+  score: number
+  stage: number
+  status: number
+}
+
+export interface RankedMissionResponse {
+  dataList: RankedMemberItem[]
+}
+
 export interface MissionListItemId {
   accountSerialNo: number
   missionNo: number

@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/apiClient"
-import type { MissionListResponse, MissionSummaryResponse } from "@/types/mission"
+import type { MissionListResponse, MissionSummaryResponse, RankedMissionResponse } from "@/types/mission"
 
 const BASE = "/api/runnii/missionInfo"
 
@@ -11,10 +11,16 @@ export const missionService = {
   getListByMissionNo(missionNo: number, groupNo: number): Promise<MissionListResponse> {
     return apiClient.post(`${BASE}/getMissionInfoListByMissionNo.do`, { missionNo, groupNo })
   },
+
+  getRankedMembers(missionNo: number, number: number): Promise<RankedMissionResponse> {
+    return apiClient.post(`${BASE}/getRankedMissionInfoByMissionNoAndNumber.do`, { missionNo, number })
+  },
 }
 
 export const missionKeys = {
   summaryByGroupNo: (missionNo: number) => ["mission", "summary", missionNo] as const,
   listByMissionNo: (missionNo: number, groupNo: number) =>
     ["mission", "list", missionNo, groupNo] as const,
+  rankedMembers: (missionNo: number, number: number) =>
+    ["mission", "ranked", missionNo, number] as const,
 }
