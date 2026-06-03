@@ -1,4 +1,7 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { ChevronDownIcon, ChevronUpIcon, ChevronsUpDownIcon, RefreshCwIcon } from "lucide-react"
+import { Badge } from "@workspace/ui/components/badge"
 import { Input } from "@workspace/ui/components/input"
 import {
   Table,
@@ -8,70 +11,42 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
-import { Badge } from "@workspace/ui/components/badge"
-import { ChevronUpIcon, ChevronDownIcon, ChevronsUpDownIcon, RefreshCwIcon } from "lucide-react"
 import { cn } from "@workspace/ui/lib/utils"
+import { missionKeys, missionService } from "@/services/missionService"
+import type { SummaryList } from "@/types/mission"
 
-interface SummaryList {
-  duration: number
-  GroupName?: string
-  score: number
-  finishTime: string
-  distance: number
-  stage: number
-  GroupNo: number
-  count: number
-  calories: number
-}
+const MISSION_NO = 2022260601
 
-type SortField = "distance" | "duration" | "score"
+type SortField = "duration" | "score" | "distance"
 type SortDir = "asc" | "desc"
 
-function SortIcon({ field, sortField, sortDir }: { field: SortField; sortField: SortField; sortDir: SortDir }) {
-  if (field !== sortField) return <ChevronsUpDownIcon className="size-3.5 text-muted-foreground" />
-  return sortDir === "asc"
-    ? <ChevronUpIcon className="size-3.5" />
-    : <ChevronDownIcon className="size-3.5" />
+function SortIcon({
+  field,
+  sortField,
+  sortDir,
+}: {
+  field: SortField
+  sortField: SortField
+  sortDir: SortDir
+}) {
+  if (field !== sortField)
+    return <ChevronsUpDownIcon className="size-3.5 text-muted-foreground" />
+  return sortDir === "asc" ? (
+    <ChevronUpIcon className="size-3.5" />
+  ) : (
+    <ChevronDownIcon className="size-3.5" />
+  )
 }
 
 export function App() {
-  const [data, setData] = useState<SummaryList[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [sortField, setSortField] = useState<SortField>("score")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
 
-  const fetchData = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch(
-        "https://www.runnii4life.com/RUNNII/missionInfo/getMissionInfoSummaryGroupByGroupNo.do",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json, text/plain, */*",
-            "User-Agent":
-              "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
-          },
-          body: JSON.stringify({ missionNo: 2022260601, type: 1 }),
-        }
-      )
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const json = await res.json()
-      setData(json.summaryList ?? [])
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unknown error")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchData()
-  }, [])
+  const { data, isFetching, error, refetch } = useQuery({
+    queryKey: missionKeys.summaryByGroupNo(MISSION_NO),
+    queryFn: () => missionService.getSummaryByGroupNo(MISSION_NO),
+  })
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -82,7 +57,7 @@ export function App() {
     }
   }
 
-  const filtered = data
+  const rows: SummaryList[] = (data?.summaryList ?? [])
     .filter((row) =>
       (row.GroupName ?? `隊伍 ${row.GroupNo}`)
         .toLowerCase()
@@ -97,7 +72,7 @@ export function App() {
     <div className="flex min-h-svh flex-col gap-4 p-6">
       <div className="flex flex-col gap-1">
         <h1 className="text-lg font-semibold">任務排行榜</h1>
-        <p className="text-sm text-muted-foreground">任務編號：2022260601</p>
+        <p className="text-sm text-muted-foreground">任務編號：{MISSION_NO}</p>
       </div>
 
       <div className="flex items-center gap-2">
@@ -108,28 +83,28 @@ export function App() {
           className="max-w-xs"
         />
         <button
-          onClick={fetchData}
-          disabled={loading}
+          onClick={() => refetch()}
+          disabled={isFetching}
           className={cn(
             "inline-flex size-8 items-center justify-center rounded-lg border border-input text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50",
-            loading && "animate-spin"
+            isFetching && "animate-spin"
           )}
           aria-label="重新整理"
         >
           <RefreshCwIcon className="size-4" />
         </button>
-        {!loading && !error && (
-          <span className="text-xs text-muted-foreground">共 {filtered.length} 支隊伍</span>
+        {!isFetching && !error && (
+          <span className="text-xs text-muted-foreground">共 {rows.length} 支隊伍</span>
         )}
       </div>
 
       {error && (
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          載入失敗：{error}
+          載入失敗：{error.message}
         </div>
       )}
 
-      {loading ? (
+      {isFetching && !data ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <RefreshCwIcon className="size-4 animate-spin" />
           載入中...
@@ -173,14 +148,14 @@ export function App() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
+            {rows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
                   {search ? "找不到符合的隊伍" : "暫無資料"}
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((row, idx) => (
+              rows.map((row, idx) => (
                 <TableRow key={row.GroupNo}>
                   <TableCell className="text-center text-muted-foreground">{idx + 1}</TableCell>
                   <TableCell className="font-medium">
@@ -195,7 +170,7 @@ export function App() {
                     <Badge variant="outline">Stage {row.stage}</Badge>
                   </TableCell>
                   <TableCell>{row.distance.toLocaleString()}</TableCell>
-                  <TableCell className="text-muted-foreground text-xs">{row.finishTime}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{row.finishTime}</TableCell>
                 </TableRow>
               ))
             )}
