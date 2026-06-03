@@ -14,6 +14,7 @@ import {
 import { cn } from "@workspace/ui/lib/utils"
 import { missionKeys, missionService } from "@/services/missionService"
 import type { SummaryList } from "@/types/mission"
+import { MemberDialog } from "@/components/MemberDialog"
 
 const MISSION_NO = 2022260601
 
@@ -42,6 +43,7 @@ export function App() {
   const [search, setSearch] = useState("")
   const [sortField, setSortField] = useState<SortField>("score")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
+  const [selectedGroup, setSelectedGroup] = useState<SummaryList | null>(null)
 
   const { data, isFetching, error, refetch } = useQuery({
     queryKey: missionKeys.summaryByGroupNo(MISSION_NO),
@@ -158,7 +160,11 @@ export function App() {
               </TableRow>
             ) : (
               rows.map((row, idx) => (
-                <TableRow key={row.GroupNo}>
+                <TableRow
+                  key={row.GroupNo}
+                  className="cursor-pointer"
+                  onClick={() => setSelectedGroup(row)}
+                >
                   <TableCell className="text-center text-muted-foreground">{idx + 1}</TableCell>
                   <TableCell className="font-medium">
                     {row.GroupName ?? `隊伍 ${row.GroupNo}`}
@@ -179,6 +185,11 @@ export function App() {
           </TableBody>
         </Table>
       )}
+
+      <MemberDialog
+        group={selectedGroup}
+        onClose={() => setSelectedGroup(null)}
+      />
     </div>
   )
 }
