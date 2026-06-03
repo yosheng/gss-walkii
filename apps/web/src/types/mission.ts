@@ -31,6 +31,10 @@ export interface RankedMissionResponse {
   dataList: RankedMemberItem[]
 }
 
+export interface RankedMemberEnriched extends RankedMemberItem {
+  accountName: string | null
+}
+
 export interface MissionListItemId {
   accountSerialNo: number
   missionNo: number

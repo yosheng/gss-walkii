@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
 import { RefreshCwIcon } from "lucide-react"
 import { Badge } from "@workspace/ui/components/badge"
 import { Input } from "@workspace/ui/components/input"
@@ -12,21 +11,15 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
-import { missionKeys, missionService } from "@/services/missionService"
-
-const MISSION_NO = 2022260601
-const RANKED_NUMBER = 500
+import { useRankedMemberData } from "@/hooks/useRankedMemberData"
 
 export function RankedMemberTable() {
   const [search, setSearch] = useState("")
 
-  const { data, isLoading, error, refetch, isFetching } = useQuery({
-    queryKey: missionKeys.rankedMembers(MISSION_NO, RANKED_NUMBER),
-    queryFn: () => missionService.getRankedMembers(MISSION_NO, RANKED_NUMBER),
-  })
+  const { data, isLoading, error, refetch, isFetching } = useRankedMemberData()
 
-  const rows = (data?.dataList ?? []).filter((row) =>
-    (row.name ?? "").toLowerCase().includes(search.toLowerCase())
+  const rows = data.filter((row) =>
+    (row.accountName ?? "").toLowerCase().includes(search.toLowerCase())
   )
 
   return (
@@ -95,7 +88,7 @@ export function RankedMemberTable() {
               : rows.map((row, idx) => (
                   <TableRow key={row.id.accountSerialNo}>
                     <TableCell className="text-center text-muted-foreground">{idx + 1}</TableCell>
-                    <TableCell className="font-medium">{row.name ?? "—"}</TableCell>
+                    <TableCell className="font-medium">{row.accountName ?? "—"}</TableCell>
                     <TableCell>{row.duration.toLocaleString()}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">{row.score}</Badge>
