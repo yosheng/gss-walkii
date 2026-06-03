@@ -64,8 +64,10 @@ export function App() {
         .includes(search.toLowerCase())
     )
     .sort((a, b) => {
-      const v = a[sortField] - b[sortField]
-      return sortDir === "asc" ? v : -v
+      const primary = a[sortField] - b[sortField]
+      if (primary !== 0) return sortDir === "asc" ? primary : -primary
+      if (sortField !== "duration") return b.duration - a.duration
+      return 0
     })
 
   return (
