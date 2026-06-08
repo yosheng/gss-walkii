@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { RefreshCwIcon } from "lucide-react"
+import { ChevronDownIcon, ChevronUpIcon, ChevronsUpDownIcon, RefreshCwIcon } from "lucide-react"
 import { Badge } from "@workspace/ui/components/badge"
 import { Input } from "@workspace/ui/components/input"
 import { Skeleton } from "@workspace/ui/components/skeleton"
@@ -11,16 +11,57 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
+import { cn } from "@workspace/ui/lib/utils"
 import { useRankedMemberData } from "@/hooks/useRankedMemberData"
+import type { RankedMemberEnriched } from "@/types/mission"
+
+type SortField = "duration" | "score"
+type SortDir = "asc" | "desc"
+
+function SortIcon({
+  field,
+  sortField,
+  sortDir,
+}: {
+  field: SortField
+  sortField: SortField
+  sortDir: SortDir
+}) {
+  if (field !== sortField)
+    return <ChevronsUpDownIcon className="size-3.5 text-muted-foreground" />
+  return sortDir === "asc" ? (
+    <ChevronUpIcon className="size-3.5" />
+  ) : (
+    <ChevronDownIcon className="size-3.5" />
+  )
+}
 
 export function RankedMemberTable() {
   const [search, setSearch] = useState("")
+  const [sortField, setSortField] = useState<SortField>("score")
+  const [sortDir, setSortDir] = useState<SortDir>("desc")
 
   const { data, isLoading, error, refetch, isFetching } = useRankedMemberData()
 
-  const rows = data.filter((row) =>
-    (row.accountName ?? "").toLowerCase().includes(search.toLowerCase())
-  )
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+    } else {
+      setSortField(field)
+      setSortDir("desc")
+    }
+  }
+
+  const rows: RankedMemberEnriched[] = data
+    .filter((row) =>
+      (row.accountName ?? "").toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => {
+      const primary = a[sortField] - b[sortField]
+      if (primary !== 0) return sortDir === "asc" ? primary : -primary
+      if (sortField !== "duration") return b.duration - a.duration
+      return 0
+    })
 
   return (
     <div className="flex flex-col gap-4">
@@ -34,10 +75,10 @@ export function RankedMemberTable() {
         <button
           onClick={() => refetch()}
           disabled={isFetching}
-          className={[
+          className={cn(
             "inline-flex size-8 items-center justify-center rounded-lg border border-input text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50",
-            isFetching ? "animate-spin" : "",
-          ].join(" ")}
+            isFetching && "animate-spin"
+          )}
           aria-label="重新整理"
         >
           <RefreshCwIcon className="size-4" />
@@ -58,8 +99,24 @@ export function RankedMemberTable() {
           <TableRow>
             <TableHead className="w-10 text-center">#</TableHead>
             <TableHead>姓名</TableHead>
-            <TableHead>累計步數</TableHead>
-            <TableHead>得分</TableHead>
+            <TableHead
+              className="cursor-pointer select-none"
+              onClick={() => handleSort("duration")}
+            >
+              <span className="inline-flex items-center gap-1">
+                累計步數
+                <SortIcon field="duration" sortField={sortField} sortDir={sortDir} />
+              </span>
+            </TableHead>
+            <TableHead
+              className="cursor-pointer select-none"
+              onClick={() => handleSort("score")}
+            >
+              <span className="inline-flex items-center gap-1">
+                得分
+                <SortIcon field="score" sortField={sortField} sortDir={sortDir} />
+              </span>
+            </TableHead>
             <TableHead>距離</TableHead>
             <TableHead>卡路里</TableHead>
             <TableHead>階段</TableHead>

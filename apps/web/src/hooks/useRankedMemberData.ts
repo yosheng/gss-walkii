@@ -24,10 +24,12 @@ export function useRankedMemberData() {
     (accountQuery.data?.dataList ?? []).map((a) => [a.serialNo, a])
   )
 
-  const data: RankedMemberEnriched[] = (rankedQuery.data?.dataList ?? []).map((member) => ({
-    ...member,
-    accountName: accountMap.get(member.id.accountSerialNo)?.name ?? member.name,
-  }))
+  const data: RankedMemberEnriched[] = (rankedQuery.data?.dataList ?? [])
+    .map((member) => ({
+      ...member,
+      accountName: accountMap.get(member.id.accountSerialNo)?.name ?? member.name,
+    }))
+    .sort((a, b) => b.score - a.score || b.duration - a.duration)
 
   return {
     data,
