@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="slides-format" content="viewport">
+  <title>GSS Walkii 開發歷程</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <style type="text/tailwindcss">
+    @theme {
+      --color-bg: #ffffff;
+      --color-bg-deep: #f8fafc;
+      --color-surface: #f8fafc;
+      --color-text: #1e293b;
+      --color-text-secondary: #334155;
+      --color-text-muted: #64748b;
+      --color-accent-1: #1E40AF;
+      --color-accent-2: #F59E0B;
+      --color-accent-3: #E2E8F0;
+      --color-glass-bg: rgba(255,255,255,0.92);
+      --color-glass-border: rgba(30,41,59,0.08);
+      --color-vignette: rgba(0,0,0,0.04);
+      --font-display: 'Noto Sans TC', sans-serif;
+      --font-body: 'Noto Sans TC', sans-serif;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    :root { --color-bg: #ffffff; --color-text: #1e293b; --glow-color-rgb: 30,64,175; }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { background: var(--color-bg); margin: 0; }
+    body { font-family: 'Noto Sans TC', sans-serif; color: var(--color-text); overflow: hidden; height: 100vh; width: 100vw; }
+    .deck { width: 100vw; height: 100vh; position: relative; }
+    .slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--color-bg); display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transform: scale(0.98); transition: opacity 0.5s ease, transform 0.5s ease; pointer-events: none; overflow: hidden; }
+    .slide.active { opacity: 1; transform: scale(1); pointer-events: all; }
+    .slide > .content { position: relative; z-index: 2; width: 100%; max-width: 1180px; padding: 56px 68px 72px; }
+    .nav-controls { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; z-index: 100; background: rgba(255,255,255,0.92); padding: 10px 18px; border-radius: 999px; border: 1px solid rgba(30,41,59,0.08); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+    .nav-btn { width: 38px; height: 38px; border: none; background: #eff6ff; color: #1E40AF; border-radius: 50%; font-size: 1.2rem; cursor: pointer; }
+    .slide-dots { display: flex; gap: 8px; }
+    .slide-dots .dot { width: 10px; height: 10px; border-radius: 50%; background: #cbd5e1; cursor: pointer; }
+    .slide-dots .dot.active { background: #1E40AF; transform: scale(1.25); }
+    .slide-counter { font-size: 0.8rem; color: #64748b; min-width: 42px; text-align: center; }
+    .reveal { opacity: 0; transform: translateY(16px); }
+    .gradient-mesh { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+    .blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.12; }
+    .slide::before { content:''; position:absolute; inset:0; z-index:1; pointer-events:none; background: radial-gradient(circle at top right, rgba(30,64,175,0.06), transparent 30%), radial-gradient(circle at bottom left, rgba(245,158,11,0.08), transparent 30%); }
+    .section-label { position:absolute; top: 26px; right: 42px; font-size: 14px; color:#94a3b8; letter-spacing:0.08em; }
+    .page-no { position:absolute; bottom: 22px; left:0; right:0; text-align:center; font-size:14px; color:#94a3b8; z-index:3; }
+    .blue-panel { background:#1E40AF; color:#fff; }
+    .card { background: #fff; border:1px solid #e2e8f0; border-radius: 20px; box-shadow: 0 10px 30px rgba(15,23,42,0.06); }
+    .soft-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:18px; }
+    .accent { color:#F59E0B; }
+    .num-dot { width:42px; height:42px; border-radius:999px; background:#1E40AF; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; }
+    .arrow-step { position:relative; padding:24px 28px; border-radius:18px; background:#fff; border:1px solid #dbeafe; box-shadow: 0 8px 24px rgba(30,64,175,0.08); }
+    .arrow-step::after { content:'→'; position:absolute; right:-32px; top:50%; transform:translateY(-50%); font-size:30px; color:#94a3b8; }
+    .arrow-step:last-child::after { display:none; }
+    .flow-node { display:flex; align-items:center; gap:18px; padding:18px 22px; border-radius:18px; background:#fff; border:1px solid #e2e8f0; box-shadow: 0 8px 20px rgba(15,23,42,0.05); }
+    .codebox { background:#0f172a; color:#e2e8f0; border-radius:16px; padding:14px 18px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:16px; }
+    .warning { border:2px solid #F59E0B; background:#fff7ed; color:#9a3412; border-radius:16px; padding:16px 18px; }
+    .metric { text-align:center; padding:28px 20px; }
+    .metric .big { font-size:56px; font-weight:900; color:#F59E0B; line-height:1; }
+    .screenshot-box { background:#f8fafc; border:2px solid #1E40AF; border-radius:18px; padding:10px; }
+    .screenshot-box img { width:100%; height:320px; object-fit:cover; border-radius:12px; display:block; }
+    .preview-frame-wrap { background:#f8fafc; border:2px solid #1E40AF; border-radius:18px; padding:12px; box-shadow: 0 8px 24px rgba(30,64,175,0.08); }
+    .preview-toolbar { display:flex; align-items:center; gap:8px; padding:8px 10px 12px; }
+    .preview-dot { width:10px; height:10px; border-radius:50%; background:#cbd5e1; }
+    .preview-url { margin-left:8px; font-size:13px; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .preview-frame { width:100%; height:320px; border:none; border-radius:12px; background:#fff; }
+    .preview-fallback { margin-top:12px; padding:14px 16px; border-radius:14px; background:#eff6ff; color:#1e3a8a; font-size:15px; line-height:1.6; }
+  </style>
+</head>
+<body>
+<div class="deck">
+  <div class="slide slide-1 active" data-slide="1">
+    <div class="gradient-mesh">
+      <div class="blob" style="width:380px;height:380px;left:-80px;top:-80px;background:#dbeafe"></div>
+      <div class="blob" style="width:300px;height:300px;right:-50px;bottom:-50px;background:#fde68a"></div>
+    </div>
+    <div class="content p-0 max-w-none h-full grid grid-cols-[34%_66%]">
+      <div class="blue-panel h-full px-14 py-16 flex flex-col justify-between reveal">
+        <div>
+          <div class="text-sm tracking-[0.28em] uppercase text-blue-100 mb-6">技術分享 · 2026</div>
+          <h1 class="text-[44px] font-black leading-tight mb-4">GSS Walkii<br>開發歷程</h1>
+          <p class="text-[24px] font-medium text-blue-100 leading-snug">從 API 分析到 Web 應用上線</p>
+        </div>
+        <div>
+          <div class="text-xl font-bold">GSS 叡揚資訊</div>
+          <div class="text-sm text-blue-100 mt-2">GitHub / Vercel / Shadcn UI</div>
+        </div>
+      </div>
+      <div class="h-full px-16 py-16 flex flex-col justify-center reveal">
+        <div class="mb-8 text-right text-sm text-slate-400 tracking-[0.12em]">PROJECT OVERVIEW</div>
+        <div class="card p-10 min-h-[420px] flex flex-col justify-center">
+          <div class="text-[18px] text-slate-500 mb-4">專案主軸</div>
+          <div class="text-[34px] font-black text-slate-800 leading-tight mb-6">從行動 App 封閉資料，<br>快速轉換成可公開存取的 Web 排行榜</div>
+          <div class="text-[20px] text-slate-600 leading-relaxed mb-8">以 API 還原、前端重建與自動部署三個階段，將原本分散的操作流程整理成可展示、可維護、可快速上線的成果。</div>
+          <div class="grid grid-cols-3 gap-4">
+            <div class="soft-card p-5 text-center"><div class="text-[18px] font-bold text-blue-800 mb-1">API 分析</div><div class="text-[14px] text-slate-500">還原資料來源</div></div>
+            <div class="soft-card p-5 text-center"><div class="text-[18px] font-bold text-blue-800 mb-1">介面開發</div><div class="text-[14px] text-slate-500">重建排行榜體驗</div></div>
+            <div class="soft-card p-5 text-center"><div class="text-[18px] font-bold text-blue-800 mb-1">自動部署</div><div class="text-[14px] text-slate-500">快速對外發布</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-no">1</div>
+  </div>
+
+  <div class="slide slide-2" data-slide="2">
+    <div class="section-label">流程總覽</div>
+    <div class="gradient-mesh"><div class="blob" style="width:260px;height:260px;right:-40px;top:40px;background:#dbeafe"></div></div>
+    <div class="content">
+      <h2 class="text-[40px] font-black text-slate-800 mb-10 reveal">專案三步驟</h2>
+      <div class="grid grid-cols-3 gap-10 items-start">
+        <div class="arrow-step reveal">
+          <div class="text-[20px] font-bold text-blue-800 mb-3">① API 分析</div>
+          <div class="text-[18px] text-slate-600 leading-relaxed">攔截 App 請求，取得後端 API 資料</div>
+        </div>
+        <div class="arrow-step reveal">
+          <div class="text-[20px] font-bold text-blue-800 mb-3">② 介面開發</div>
+          <div class="text-[18px] text-slate-600 leading-relaxed">根據 API 快速構建前端頁面</div>
+        </div>
+        <div class="arrow-step reveal">
+          <div class="text-[20px] font-bold text-blue-800 mb-3">③ 上線部署</div>
+          <div class="text-[18px] text-slate-600 leading-relaxed">自動化部署，公開對外存取</div>
+        </div>
+      </div>
+      <div class="mt-12 card p-8 reveal">
+        <div class="grid grid-cols-3 gap-6 text-[18px]">
+          <div><span class="font-bold text-blue-800">輸入：</span>Walkii App 流量與操作行為</div>
+          <div><span class="font-bold text-blue-800">處理：</span>API 驗證、前端生成、程式審查</div>
+          <div><span class="font-bold text-blue-800">輸出：</span>可公開存取的排行榜網站</div>
+        </div>
+      </div>
+    </div>
+    <div class="page-no">2</div>
+  </div>
+
+  <div class="slide slide-3" data-slide="3">
+    <div class="section-label">Step 1</div>
+    <div class="gradient-mesh"><div class="blob" style="width:220px;height:220px;left:-50px;bottom:-40px;background:#fde68a"></div></div>
+    <div class="content">
+      <h2 class="text-[40px] font-black text-slate-800 mb-8 reveal">Step 1｜攔截 App 請求</h2>
+      <div class="grid grid-cols-2 gap-8">
+        <div class="card p-8 reveal">
+          <div class="text-[26px] font-bold text-blue-800 mb-6">工具清單</div>
+          <div class="space-y-4 text-[18px] text-slate-700">
+            <div><span class="font-bold">工具：</span><span class="accent font-bold">Quantmult X</span></div>
+            <div><span class="font-bold">功能：</span>手機流量中間人分析（MitM）</div>
+            <div><span class="font-bold">平台：</span>iOS</div>
+            <div><span class="font-bold">輸出物：</span><span class="accent font-bold">HAR 檔案</span></div>
+          </div>
+        </div>
+        <div class="card p-8 reveal">
+          <div class="text-[26px] font-bold text-blue-800 mb-6">操作步驟</div>
+          <div class="space-y-5">
+            <div class="flex items-start gap-4"><div class="num-dot">1</div><div class="text-[18px] text-slate-700 pt-2">安裝並信任 MitM 根證書</div></div>
+            <div class="flex items-start gap-4"><div class="num-dot">2</div><div class="text-[18px] text-slate-700 pt-2">開啟 VPN + HTTP 數據抓取</div></div>
+            <div class="flex items-start gap-4"><div class="num-dot">3</div><div class="text-[18px] text-slate-700 pt-2">操作 Walkii App，觸發 API 請求</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-8 warning reveal">輸出物 → HAR 檔案，作為後續 API 驗證與前端串接的基礎。</div>
+    </div>
+    <div class="page-no">3</div>
+  </div>
+
+  <div class="slide slide-4" data-slide="4">
+    <div class="section-label">Step 1</div>
+    <div class="gradient-mesh"><div class="blob" style="width:240px;height:240px;right:-60px;bottom:-20px;background:#dbeafe"></div></div>
+    <div class="content">
+      <h2 class="text-[40px] font-black text-slate-800 mb-10 reveal">MitM 抓包流程</h2>
+      <div class="grid grid-cols-5 gap-4 items-center reveal">
+        <div class="flow-node"><div class="text-3xl">📱</div><div><div class="font-bold text-blue-800">iOS 手機</div><div class="text-sm text-slate-500">操作 Walkii App</div></div></div>
+        <div class="text-center text-3xl text-slate-300">→</div>
+        <div class="flow-node"><div class="text-3xl">🛡️</div><div><div class="font-bold text-blue-800">Quantmult X VPN</div><div class="text-sm text-slate-500">建立中間人代理</div></div></div>
+        <div class="text-center text-3xl text-slate-300">→</div>
+        <div class="flow-node"><div class="text-3xl">📦</div><div><div class="font-bold text-blue-800">導出 HAR</div><div class="text-sm text-slate-500">供 API 驗證使用</div></div></div>
+      </div>
+      <div class="mt-8 grid grid-cols-2 gap-8 reveal">
+        <div class="soft-card p-6 text-[18px] leading-relaxed text-slate-700">攔截 HTTPS 流量後，透過已信任的根憑證進行解密，讓 App 與後端服務之間的請求可被還原與分析。</div>
+        <div class="soft-card p-6 text-[18px] leading-relaxed text-slate-700">備注：需事先在 iOS 信任 MitM 根憑證，否則 HTTPS 無法解密。</div>
+      </div>
+    </div>
+    <div class="page-no">4</div>
+  </div>
+
+  <div class="slide slide-5" data-slide="5">
+    <div class="section-label">Step 2</div>
+    <div class="gradient-mesh"><div class="blob" style="width:250px;height:250px;left:-50px;top:30px;background:#fde68a"></div></div>
+    <div class="content">
+      <h2 class="text-[40px] font-black text-slate-800 mb-8 reveal">Step 2｜驗證 API 可用性</h2>
+      <div class="grid grid-cols-2 gap-8 reveal">
+        <div class="card p-8">
+          <div class="text-[24px] font-bold text-blue-800 mb-5">Postman 方式</div>
+          <ul class="space-y-4 text-[18px] text-slate-700">
+            <li>HAR → Chrome Network</li>
+            <li>複製 curl → 匯入 Postman Collection</li>
+            <li>測試 API 回傳結果</li>
+          </ul>
+        </div>
+        <div class="card p-8">
+          <div class="text-[24px] font-bold text-blue-800 mb-5">Requable 方式</div>
+          <ul class="space-y-4 text-[18px] text-slate-700">
+            <li>HAR 直接拖入 Requable</li>
+            <li>一步完成導入</li>
+            <li>測試 API 回傳結果</li>
+          </ul>
+        </div>
+      </div>
+      <div class="mt-8 warning reveal">⚠ 確認 API 正常回傳資料後，才進入前端開發。</div>
+    </div>
+    <div class="page-no">5</div>
+  </div>
+
+  <div class="slide slide-6" data-slide="6">
+    <div class="section-label">Step 3</div>
+    <div class="gradient-mesh"><div class="blob" style="width:250px;height:250px;right:-40px;top:0;background:#dbeafe"></div></div>
+    <div class="content">
+      <h2 class="text-[40px] font-black text-slate-800 mb-8 reveal">Step 3｜選擇前端技術棧</h2>
+      <div class="grid grid-cols-2 gap-8">
+        <div class="card p-8 reveal">
+          <div class="text-[26px] font-bold text-blue-800 mb-5">Shadcn 選擇理由</div>
+          <div class="space-y-4 text-[18px] text-slate-700">
+            <div>✔ <span class="font-bold">開源 MIT 授權</span>，允許商用</div>
+            <div>✔ <span class="font-bold">官方 CLI</span>，快速建立應用</div>
+            <div>✔ <span class="font-bold">AI Skill / MCP 整合</span>，提高生成效率</div>
+          </div>
+        </div>
+        <div class="card p-8 reveal">
+          <div class="text-[26px] font-bold text-blue-800 mb-5">部署平台：Vercel</div>
+          <div class="text-[18px] text-slate-700 leading-relaxed">優勢是 <span class="accent font-bold">GitHub 推送即自動部署</span>，不需自行維運伺服器，適合快速驗證與對外發布。</div>
+          <div class="mt-8 soft-card p-5">
+            <div class="text-sm text-slate-500 mb-2">Repository</div>
+            <div class="text-[16px] font-bold text-blue-800 break-all">github.com/yosheng/gss-walkii</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-no">6</div>
+  </div>
+
+  <div class="slide slide-7" data-slide="7">
+    <div class="section-label">Step 3</div>
+    <div class="gradient-mesh"><div class="blob" style="width:230px;height:230px;left:-60px;bottom:-50px;background:#dbeafe"></div></div>
+    <div class="content">
+      <h2 class="text-[40px] font-black text-slate-800 mb-8 reveal">AI 輔助開發（Vibe Coding）</h2>
+      <div class="grid grid-cols-[1.15fr_0.85fr] gap-8">
+        <div class="card p-8 reveal">
+          <div class="space-y-5">
+            <div>
+              <div class="flex items-center gap-4 mb-2"><div class="num-dot">1</div><div class="text-[22px] font-bold text-blue-800">初始化 Shadcn 專案</div></div>
+              <div class="codebox">pnpm dlx shadcn@latest init</div>
+            </div>
+            <div>
+              <div class="flex items-center gap-4 mb-2"><div class="num-dot">2</div><div class="text-[22px] font-bold text-blue-800">加入 UI 元件知識庫</div></div>
+              <div class="codebox">pnpm dlx skills add shadcn/ui</div>
+            </div>
+            <div>
+              <div class="flex items-center gap-4 mb-2"><div class="num-dot">3</div><div class="text-[22px] font-bold text-blue-800">描述需求並生成程式</div></div>
+              <div class="soft-card p-4 text-[18px] text-slate-700">打開 Claude Code，描述排行榜頁面需求與資料欄位。</div>
+            </div>
+            <div>
+              <div class="flex items-center gap-4 mb-2"><div class="num-dot">4</div><div class="text-[22px] font-bold text-blue-800">人工審查與發布</div></div>
+              <div class="soft-card p-4 text-[18px] text-slate-700">審查程式碼 → 提交 Git → 推送 GitHub。</div>
+            </div>
+          </div>
+        </div>
+        <div class="warning reveal self-start mt-12 text-[20px] leading-relaxed">AI 撰寫程式碼，<span class="font-bold">人負責審查</span>與調整方向。</div>
+      </div>
+    </div>
+    <div class="page-no">7</div>
+  </div>
+
+  <div class="slide slide-8" data-slide="8">
+    <div class="section-label">成果展示</div>
+    <div class="gradient-mesh"><div class="blob" style="width:240px;height:240px;right:-50px;bottom:-40px;background:#fde68a"></div></div>
+    <div class="content">
+      <h2 class="text-[40px] font-black text-slate-800 mb-8 reveal">成果｜Walkii 排行榜 Web App</h2>
+      <div class="grid grid-cols-[0.9fr_1.1fr] gap-8 items-start">
+        <div class="card p-8 reveal">
+          <div class="text-[24px] font-bold text-blue-800 mb-5">功能與技術</div>
+          <ul class="space-y-4 text-[18px] text-slate-700">
+            <li>個人排行、隊伍排行、成員展開、資料排序</li>
+            <li>React + Shadcn UI + Vercel</li>
+            <li>以 API 資料快速重建可讀性更高的 Web 介面</li>
+          </ul>
+          <div class="mt-6 soft-card p-5">
+            <div class="text-sm text-slate-500 mb-2">Repository URL</div>
+            <div class="text-[16px] font-bold text-blue-800 break-all">https://github.com/yosheng/gss-walkii</div>
+          </div>
+        </div>
+        <div class="preview-frame-wrap reveal">
+          <div class="preview-toolbar">
+            <span class="preview-dot" style="background:#f87171"></span>
+            <span class="preview-dot" style="background:#fbbf24"></span>
+            <span class="preview-dot" style="background:#34d399"></span>
+            <div class="preview-url">https://gss-walkii-web.vercel.app/</div>
+          </div>
+          <iframe class="preview-frame" src="https://gss-walkii-web.vercel.app/" title="Walkii 排行榜 Web App 預覽" loading="lazy"></iframe>
+          <div class="preview-fallback">目前首頁可直接查看任務排行榜、任務編號 2022260601，以及 106 支隊伍資料。</div>
+        </div>
+      </div>
+    </div>
+    <div class="page-no">8</div>
+  </div>
+
+  <div class="slide slide-9" data-slide="9">
+    <div class="section-label">總結</div>
+    <div class="gradient-mesh"><div class="blob" style="width:260px;height:260px;left:-70px;top:-30px;background:#dbeafe"></div></div>
+    <div class="content">
+      <h2 class="text-[40px] font-black text-slate-800 mb-10 text-center reveal">總結</h2>
+      <div class="grid grid-cols-3 gap-8 reveal">
+        <div class="card metric"><div class="big">3</div><div class="mt-3 text-[18px] font-bold text-blue-800">主要工具</div><div class="mt-2 text-[16px] text-slate-600">Quantmult X、Shadcn、Claude Code</div></div>
+        <div class="card metric"><div class="big">0</div><div class="mt-3 text-[18px] font-bold text-blue-800">自管伺服器</div><div class="mt-2 text-[16px] text-slate-600">以 Serverless 方式完成部署</div></div>
+        <div class="card metric"><div class="big">數小時</div><div class="mt-3 text-[18px] font-bold text-blue-800">首版完成</div><div class="mt-2 text-[16px] text-slate-600">從分析、開發到上線的完整流程</div></div>
+      </div>
+      <div class="mt-8 warning reveal text-center text-[20px]">透過 AI 與既有工具鏈整合，可將原本需多日完成的流程壓縮至數小時內交付首版成果。</div>
+    </div>
+    <div class="page-no">9</div>
+  </div>
+
+  <div class="slide slide-10" data-slide="10">
+    <div class="gradient-mesh">
+      <div class="blob" style="width:360px;height:360px;left:-90px;bottom:-90px;background:#dbeafe"></div>
+      <div class="blob" style="width:280px;height:280px;right:-50px;top:-40px;background:#fde68a"></div>
+    </div>
+    <div class="content text-center">
+      <div class="text-sm tracking-[0.22em] uppercase text-slate-400 mb-6 reveal">Q & A</div>
+      <h2 class="text-[56px] font-black text-blue-800 mb-6 reveal">感謝聆聽</h2>
+      <div class="text-[30px] font-bold text-slate-800 mb-8 reveal">Q & A</div>
+      <div class="card max-w-[820px] mx-auto p-8 reveal">
+        <div class="grid grid-cols-2 gap-6 text-left">
+          <div>
+            <div class="text-sm text-slate-500 mb-2">程式碼</div>
+            <div class="text-[18px] font-bold text-blue-800 break-all">github.com/yosheng/gss-walkii</div>
+          </div>
+          <div>
+            <div class="text-sm text-slate-500 mb-2">聯絡</div>
+            <div class="text-[18px] font-bold text-blue-800">yosheng_zhang@gss.com.tw</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="page-no">10</div>
+  </div>
+</div>
+
+<div class="nav-controls">
+  <button class="nav-btn" onclick="changeSlide(-1)">&#8249;</button>
+  <div class="slide-dots" id="dots"></div>
+  <button class="nav-btn" onclick="changeSlide(1)">&#8250;</button>
+  <span class="slide-counter" id="counter">1 / 10</span>
+</div>
+
+<script>
+let current = 1;
+const total = document.querySelectorAll('.slide').length;
+const dotsContainer = document.getElementById('dots');
+const counter = document.getElementById('counter');
+for (let i = 1; i <= total; i++) { const dot = document.createElement('div'); dot.className = 'dot' + (i === 1 ? ' active' : ''); dot.onclick = () => goToSlide(i); dotsContainer.appendChild(dot); }
+function goToSlide(n) {
+  const prev = document.querySelector('.slide.active');
+  const next = document.querySelector(`.slide[data-slide="${n}"]`);
+  if (prev) prev.classList.remove('active');
+  if (next) { next.classList.add('active'); animateSlide(next); }
+  current = n; updateNav();
+}
+function changeSlide(dir) { let next = current + dir; if (next < 1) next = total; if (next > total) next = 1; goToSlide(next); }
+function updateNav() { document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i + 1 === current)); counter.textContent = current + ' / ' + total; }
+document.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); changeSlide(1); } if (e.key === 'ArrowLeft') { e.preventDefault(); changeSlide(-1); } });
+function animateSlide(slide) {
+  slide.querySelectorAll('.reveal').forEach((el, i) => {
+    el.style.transition = 'none'; el.style.opacity = '0'; el.style.transform = 'translateY(16px)'; el.offsetHeight;
+    const delay = i * 0.08;
+    el.style.transition = `opacity 0.35s ease ${delay}s, transform 0.35s ease ${delay}s`;
+    el.style.opacity = '1'; el.style.transform = 'translateY(0)';
+  });
+}
+try { animateSlide(document.querySelector('.slide.active')); } catch(e) {}
+</script>
+</body>
+</html>
